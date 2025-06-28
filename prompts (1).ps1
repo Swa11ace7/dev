@@ -4,7 +4,7 @@ Student Id: 010895068
 
 
 #Region Function 
-function Show-Menu
+function Show-Menu {
 
     param (
         [string]$Title = "Main Menu",
@@ -35,6 +35,7 @@ function Show-Menu
         Write-Host -ForegroundColor DarkMagenta "'n*Invalid Selection. Please try again"
         Show-Menu -Title $Title -Options $Options
     }
+}
 #EndRegion
 
 
