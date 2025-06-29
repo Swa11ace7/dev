@@ -4,6 +4,7 @@
 
 
 # Checks for the existence of the OU named "Finance" and removes it if found
+$domain = Get-ADDomain
 $AdRoot = $domain.DistinguishedName
 $DnsRoot = $domain.DnsRoot
 $OUCanonicalName = "Finance"
