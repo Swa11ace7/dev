@@ -58,7 +58,7 @@ Try{
                 $outputFiles =  "$PSScriptRoot\DailyLogs.txt" 
 
                 # Timepstamp for the log file
-                "TIMESTAMP: "+(Get-Date) | Out-File -FilePath "DailyLogs.txt" -Append
+                "TIMESTAMP: "+(Get-Date) | Out-File $outputFile -Append
 
                 # Writes the log file names to the output file
                 Get-ChildItem -Path "$PSScriptRoot" -Filter "*.log" | Out-file $outputFiles -Append
@@ -69,29 +69,21 @@ Try{
                 $outputFiles =  "$PSScriptRoot\AlphabeticalLogs.txt" 
 
                 # Timepstamp for the log file
-                "TIMESTAMP: "+(Get-Date) | Out-File -FilePath "AlphabeticalLogs.txt" -Append
+                "TIMESTAMP: "+(Get-Date) | Out-File $outputFile" -Append
 
                 # Writes the log file names to the output file in alphabetical order
                 Get-ChildItem -Path "$PSScriptRoot" -Filter "*.log" | Sort-Object Name | Out-file $outputFiles -Append
             }
             3
             {
-                # Variable to hold the CPU and Memory usage
-                $outputFiles =  "$PSScriptRoot\CPU_Memory_Usage.txt" 
-
                 # Writes the CPU and Memory usage to the output file
-                Get-Process | Select-Object Name, CPU, WS | Out-file $outputFiles -Append
+                Get-Process | Select-Object Name, CPU, WS | Out-Host
             }
             4
             {
-                # Variable to hold the running processes
-                $outputFiles =  "$PSScriptRoot\Running_Processes.txt" 
-
-                # Timepstamp for the log file
-                "TIMESTAMP: "+(Get-Date) | Out-File -FilePath "Running_Processes.txt" -Append
 
                 # Writes the running processes to the output file
-                Get-Process | Select-Object Name, Id, CPU | Out-file $outputFiles -Append
+                Get-Process | Out-Host | Select-Object Name, Id, CPU 
             }
             5
             {
@@ -118,5 +110,5 @@ Catch
 }                
 finally 
 {
-    Write-Host "Thanks for running the script. Goodbye!" -ForegroundColor cyan
+  
 }
