@@ -11,7 +11,7 @@ Write-Host -ForegroundColor Cyan "[SQL]: Staring SQL Tasks"
 $sqlServerInstanceName = "SRV19-PRIMARY\SQLEXPRESS"
 
 #Sets the database name with this variable
-$databaseName = "ClientDB-InvokeSqlcmd"
+$databaseName = 'ClientDB'
 
 # Create an Object reference to the SQL Server 
 $sqlServerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server -ArgumentList $sqlServerInstanceName
@@ -45,7 +45,7 @@ White-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceN
 <# Create Table #>
 
 # Invoke a SQL Command against the SQL Instance bt reading in the contents of the Client_A_Contacts.sql
-$schema = "dbo"
+$schema = 'dbo'
 $tableName = 'Client_A_Contacts'
 Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql
 
@@ -55,17 +55,19 @@ Write-Host -ForegroundColor Cyan "[SQL]: Table Created:[$($sqlServerInstanceName
 # Import the rows from the CSV file and iterate over each one calling Invoke-Sqlcmd 
 # and passing a well-formatted INSERT statement
 
-$InsertQuery = "INSERT INTO [$($schema)].[$($tableName)] (First_Name, Last_Name, Display_Name, Postal_Code, Office_Phone, Mobile_Phone)"
+$InsertQuery = "INSERT INTO [$($schema)].[$($tableName)] (first_name, last_name, city, county, zip, officePhone, mobilePhone)"
 $NewClients = Import-Csv -Path $PSScriptRoot\NewClientData.csv
 
 Write-Host -ForegroundColor Cyan "[SQL]: Inserting Data"
 foreach ($NewClient in $NewClients) {
-    $Values = " VALUES ('$(NewClient.First_Name)', `
-                        '$($NewClient.Last_Name)', `
-                        '$($NewClient.Display_Name)', `
-                        '$($NewClient.Postal_Code)', `
-                        '$($NewClient.Office_Phone)', `
-                        '$($NewClient.Mobile_Phone)')"
+    $Values = "VALUES ('$($NewClient.first_name)', `
+                        '$($NewClient.last_name)', `
+                        '$($NewClient.city)', `
+                        '$($NewClient.county)', `
+                        '$($NewClient.zip)', `
+                        '$($NewClient.officePhone)', `
+                        '$($NewClient.mobilePhone)')"
+                        
     $query = $InsertQuery + $Values
     Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $query
 }
@@ -75,12 +77,12 @@ Write-Host -ForegroundColor Cyan "[SQL]: Reading Data"
 $selectQuery = "SELECT * FROM $($tableName)"
 $Clients = Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $selectQuery
 foreach ($Client in $Clients) {
-    Write-Host -ForegroundColor Cyan "Client Name: $($Client.First_Name), $($Client.Last_Name)"
-    Write-Host -ForegroundColor Cyan "Display Name: $($Client.Display_Name)"
-    Write-Host -ForegroundColor Cyan "Postal Code: $($Client.Postal_Code)"
-    Write-Host -ForegroundColor Cyan "Phone: $($Client.Office_Phone), $($Client.Mobile_Phone)"
+    Write-Host  "Client Name: $($Client.first_name), $($Client.last_name)"
+    Write-Host  "Address: $($Client.county) County, City of $($Client.city), Zip - $($Client.zip)"
+    Write-Host  "Phone: Office $($Client.officePhone), Mobile $($Client.mobilePhone)"
     Write-Host  "----------------"
 }
+Write-Host -ForegroundColor Cyan "[SQL]: SQL Tasks Complete"
 
 # Used to create a SqlResults file
-Invoke-Sqlcmd -Database ClientDB -ServerInstance .\SQLEXPRESS -Query 'SELECT * FROM dbo.Client_A_Contacts' > .\SqlResults.txt
+Invoke-Sqlcmd -Database ClientDB -ServerInstance .\SQLEXPRESS -Query 'SELECT * FROM dbo.Client_A_Contacts'> .\SqlResults.txt
