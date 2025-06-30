@@ -2,46 +2,22 @@
 # Student Id: 010895068
 #>
 
-
 if (Get-Module -Name sqlps) { Remove-Module sqlps}
 Import-Module -Name SqlServer
 
 Write-Host -ForegroundColor Cyan "[SQL]: Staring SQL Tasks"
 
+# Set a string variable equal to the name SQL instance 
 $sqlServerInstanceName = "SRV19-PRIMARY\SQLEXPRESS"
 
 #Sets the database name with this variable
-$databaseName = "ClientDB"
+$databaseName = "ClientDB-InvokeSqlcmd"
 
-
-# Create Connection to Server
-$connectionString = "Data Source=$($sqlServerInstanceName);Initial Catalog=master;Inegrated Security=True;"
-$sqlConnection = New-Object System.Data.SqlClient.SqlConnection
-$sqlConnection.ConnectionString = $connectionString
-$sqlConnection.Open()
-
-# Create query to detect if database alreadt exists
-$detectQuery = "SELECT name FROM sys.databases WHERE name = '$($databaseName)'"
-
-# Create Command object to run query 
-$sqlCommand = New-Object System.Data.SqlClient.SqlCommand $detectQuery, $sqlConnection
-$sqlReader = $sqlCommand.ExecuteReader()
-
-if($sqlReader.Read())
-{
-    $sqlReader.Close()
-    Write-Host -ForegroundColor Cyan "[SQL]: $($databaseName) Database Found. Deleting"
-    # Create query and command to dorp database
-    $dropQuery = "ALTER DATABASE [$($databaseName)] SET SINGLE_USER WITH ROLLBACK IMMEDIATE DROP DATABASE [$($databaseName)]"
-    $sqlCommand.CommandText = $dropQuery
-    $sqlCommand.ExecuteNonQuery() | Out-Null
-}
-$sqlReader.Close()
-$sqlReader.Dispose()
-
+# Create an Object reference to the SQL Server 
 $sqlServerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server -ArgumentList $sqlServerInstanceName
 
-$databaseObject = Get-SqlDAtabase -ServerInstance $sqlServerInstanceName -Name $databaseName -ErrorAction SilentlyContinue
+# Create an object referennce to the Database and try to detect if it exists
+$databaseObject = Get-SqlDatabase -ServerInstance $sqlServerInstanceName -Name $databaseName -ErrorAction SilentlyContinue
 if ($databaseObject) {
     Write-Host -ForegroundColor Cyan "[SQL]: $($databaseName) database has been found and removed"
     
@@ -55,52 +31,56 @@ if ($databaseObject) {
     $databaseObject.drop()
 }
 else {
-    Write-Host "[SQL]: $($databaseName) database not found"
+    White-Host "[SQL]: $($databaseName) database not found"
 }
 
 
-# Creates a new database
+# Call the Create method on the database object to create it
 $databaseObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Database -ArgumentList $sqlServerObject, $databaseName
 $databaseObject.Create()
-Write-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceName)].[$($databaseName)]"
 
+# Update user on the progress
+White-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceName)].[$($databaseName)]"
 
-#Creates a new database table
+<# Create Table #>
+
+# Invoke a SQL Command against the SQL Instance bt reading in the contents of the Client_A_Contacts.sql
 $schema = "dbo"
-$tableName = "Client_A_Contacts"
-Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\CreateTable_Client_A_Contact.sql
+$tableName = 'Client_A_Contacts'
+Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql
+
+# Update user on the progress
 Write-Host -ForegroundColor Cyan "[SQL]: Table Created:[$($sqlServerInstanceName)].[$($databaseName)].[$($schema)].[$($tableName)]"
 
+# Import the rows from the CSV file and iterate over each one calling Invoke-Sqlcmd 
+# and passing a well-formatted INSERT statement
 
-# Inserts new data into the table
-$InsertQuery = "INSERT INTO [$($schema)].[$($tableName)] (FirstName, LastName, DisplayName, PostalCode, OfficePhone, MobilePhone)"
-$NewClients = Import-Csv $PSScriptRoot\NewClientData.csv
+$InsertQuery = "INSERT INTO [$($schema)].[$($tableName)] (First_Name, Last_Name, Display_Name, Postal_Code, Office_Phone, Mobile_Phone)"
+$NewClients = Import-Csv -Path $PSScriptRoot\NewClientData.csv
 
 Write-Host -ForegroundColor Cyan "[SQL]: Inserting Data"
 foreach ($NewClient in $NewClients) {
-    $Values = " VALUES ('$($NewClient.FirstName)',
-     '$($NewClient.LastName)', 
-     '$($NewClient.DisplayName)', 
-     '$($NewClient.PostalCode)', 
-     '$($NewClient.OfficePhone)', 
-     '$($NewClient.MobilePhone)')"
-     $query = $InsertQuery + $Values
-     Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $query
-
+    $Values = " VALUES ('$(NewClient.First_Name)', `
+                        '$($NewClient.Last_Name)', `
+                        '$($NewClient.Display_Name)', `
+                        '$($NewClient.Postal_Code)', `
+                        '$($NewClient.Office_Phone)', `
+                        '$($NewClient.Mobile_Phone)')"
+    $query = $InsertQuery + $Values
+    Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $query
 }
-
 
 # Read Data
 Write-Host -ForegroundColor Cyan "[SQL]: Reading Data"
-$selectQuery = "SELCT * FROM $($tableName)"
-$Clients = Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $query
-foreach ($Client in $Clients)  {
-    Write-Host "Client Name: $($Client.FirstName) $($Client.LastName)"
-    Write-Host "Display Name: $($Client.DisplayName)"
-    Write-Host "Postal Code: $($Client.PostalCode)"
-    Write-Host "Office Phone: $($Client.OfficePhone)"
-    Write-Host "Mobile Phone: $($Client.MobilePhone)"
-    Write-Host "-------------"
+$selectQuery = "SELECT * FROM $($tableName)"
+$Clients = Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $selectQuery
+foreach ($Client in $Clients) {
+    Write-Host -ForegroundColor Cyan "Client Name: $($Client.First_Name), $($Client.Last_Name)"
+    Write-Host -ForegroundColor Cyan "Display Name: $($Client.Display_Name)"
+    Write-Host -ForegroundColor Cyan "Postal Code: $($Client.Postal_Code)"
+    Write-Host -ForegroundColor Cyan "Phone: $($Client.Office_Phone), $($Client.Mobile_Phone)"
+    Write-Host  "----------------"
 }
-Write-Host -ForegroundColor Cyan "[SQL]: SQL Tasks Complete"
+
+# Used to create a SqlResults file
 Invoke-Sqlcmd -Database ClientDB -ServerInstance .\SQLEXPRESS -Query 'SELECT * FROM dbo.Client_A_Contacts' > .\SqlResults.txt
