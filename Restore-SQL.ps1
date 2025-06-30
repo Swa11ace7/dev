@@ -5,7 +5,7 @@
 if (Get-Module -Name sqlps) { Remove-Module sqlps}
 Import-Module -Name SqlServer
 
-Write-Host -ForegroundColor Cyan "[SQL]: Staring SQL Tasks"
+Write-Host -ForegroundColor Cyan "[SQL]: Starting SQL Tasks"
 
 # Set a string variable equal to the name SQL instance 
 $sqlServerInstanceName = "SRV19-PRIMARY\SQLEXPRESS"
@@ -16,7 +16,7 @@ $databaseName = 'ClientDB'
 # Create an Object reference to the SQL Server 
 $sqlServerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Server -ArgumentList $sqlServerInstanceName
 
-# Create an object referennce to the Database and try to detect if it exists
+# Create an object reference to the Database and try to detect if it exists
 $databaseObject = Get-SqlDatabase -ServerInstance $sqlServerInstanceName -Name $databaseName -ErrorAction SilentlyContinue
 if ($databaseObject) {
     Write-Host -ForegroundColor Cyan "[SQL]: $($databaseName) database has been found and removed"
@@ -24,7 +24,7 @@ if ($databaseObject) {
     # Kills all processes in to the database
     $sqlServerObject.killAllProcesses($databaseName)
 
-    #Sets dabase object to Single user mode
+    #Sets database object to Single user mode
     $databaseObject.UserAccess = "Single"
 
     # Deletes the database
@@ -44,10 +44,10 @@ White-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceN
 
 <# Create Table #>
 
-# Invoke a SQL Command against the SQL Instance bt reading in the contents of the Client_A_Contacts.sql
+# Invoke a SQL Command against the SQL Instance by reading in the contents of the Client_A_Contacts.sql
 $schema = 'dbo'
 $tableName = 'Client_A_Contacts'
-Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql
+Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql,
 
 # Update user on the progress
 Write-Host -ForegroundColor Cyan "[SQL]: Table Created:[$($sqlServerInstanceName)].[$($databaseName)].[$($schema)].[$($tableName)]"
@@ -85,4 +85,4 @@ foreach ($Client in $Clients) {
 Write-Host -ForegroundColor Cyan "[SQL]: SQL Tasks Complete"
 
 # Used to create a SqlResults file
-Invoke-Sqlcmd -Database ClientDB -ServerInstance .\SQLEXPRESS -Query 'SELECT * FROM dbo.Client_A_Contacts'> .\SqlResults.txt
+Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query 'SELECT * FROM dbo.Client_A_Contacts'> .\SqlResults.txt
