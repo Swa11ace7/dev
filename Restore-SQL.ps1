@@ -31,7 +31,7 @@ if ($databaseObject) {
     $databaseObject.drop()
 }
 else {
-    White-Host "[SQL]: $($databaseName) database not found"
+    Write-Host "[SQL]: $($databaseName) database not found"
 }
 
 
