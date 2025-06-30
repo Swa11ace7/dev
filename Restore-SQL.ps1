@@ -28,12 +28,11 @@ if ($databaseObject) {
     $databaseObject.UserAccess = "Single"
 
     # Deletes the database
-    $databaseObject.drop()
+    $databaseObject.Drop()
 }
 else {
-    Write-Host "[SQL]: $($databaseName) database not found"
+    Write-Host -ForegroundColor Cyan "[SQL]: $($databaseName) Not Found"
 }
-
 
 # Call the Create method on the database object to create it
 $databaseObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Database -ArgumentList $sqlServerObject, $databaseName
@@ -45,9 +44,9 @@ White-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceN
 <# Create Table #>
 
 # Invoke a SQL Command against the SQL Instance by reading in the contents of the Client_A_Contacts.sql
-$schema = 'dbo'
+$schema = "dbo"
 $tableName = 'Client_A_Contacts'
-Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql,
+Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contacts.sql
 
 # Update user on the progress
 Write-Host -ForegroundColor Cyan "[SQL]: Table Created:[$($sqlServerInstanceName)].[$($databaseName)].[$($schema)].[$($tableName)]"
@@ -69,20 +68,20 @@ foreach ($NewClient in $NewClients) {
                         '$($NewClient.mobilePhone)')"
                         
     $query = $InsertQuery + $Values
-    Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $query
+    Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -Query $query
 }
 
 # Read Data
 Write-Host -ForegroundColor Cyan "[SQL]: Reading Data"
 $selectQuery = "SELECT * FROM $($tableName)"
-$Clients = Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query $selectQuery
+$Clients = Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -Query $selectQuery
 foreach ($Client in $Clients) {
-    Write-Host  "Client Name: $($Client.first_name), $($Client.last_name)"
-    Write-Host  "Address: $($Client.county) County, City of $($Client.city), Zip - $($Client.zip)"
-    Write-Host  "Phone: Office $($Client.officePhone), Mobile $($Client.mobilePhone)"
+    Write-Host  "Client Name: '$($Client.first_name)', '$($Client.last_name)'"
+    Write-Host  "Address: '$($Client.county)' County, City of '$($Client.city)', Zip - '$($Client.zip)'"
+    Write-Host  "Phone: Office '$($Client.officePhone)', Mobile '$($Client.mobilePhone)'"
     Write-Host  "----------------"
 }
 Write-Host -ForegroundColor Cyan "[SQL]: SQL Tasks Complete"
 
 # Used to create a SqlResults file
-Invoke-Sqlcmd -Database $databaseName -ServerInstance $sqlServerInstanceName -Query 'SELECT * FROM dbo.Client_A_Contacts'> .\SqlResults.txt
+Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -Query $selectQuery> .\SqlResults.txt
