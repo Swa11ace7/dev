@@ -4,7 +4,9 @@
 #>
 
 if (Get-Module -Name sqlps) { Remove-Module sqlps}
-Import-Module -Name SqlServer
+Install-Module -Name SqlServer -Scope CurrentUser -Force
+Import-Module SqlServer
+
 
 Write-Host -ForegroundColor Cyan "[SQL]: Starting SQL Tasks"
 
@@ -41,14 +43,14 @@ $databaseObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Databa
 $databaseObject.Create()
 
 # Update user on the progress
-White-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceName)].[$($databaseName)]"
+Write-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceName)].[$($databaseName)]"
 
 <# Create Table #>
 
 # Invoke a SQL Command against the SQL Instance by reading in the contents of the Client_A_Contacts.sql
 $schema = 'dbo'
 $tableName = 'Client_A_Contacts'
-Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql,
+Invoke-Sqlcmd -ServerInstance $sqlServerInstanceName -Database $databaseName -InputFile $PSScriptRoot\Client_A_Contact.sql
 
 # Update user on the progress
 Write-Host -ForegroundColor Cyan "[SQL]: Table Created:[$($sqlServerInstanceName)].[$($databaseName)].[$($schema)].[$($tableName)]"
