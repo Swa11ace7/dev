@@ -19,7 +19,7 @@ catch {
 }
 
 if ($OU) {
-    Set-ADOrganiztionUnit -Identity $AdPath -ProtectedFromAccidentalDeletion:$false
+    Set-ADOrganizationUnit -Identity $AdPath -ProtectedFromAccidentalDeletion:$false
     Remove-ADOrganizationalUnit -Identity $AdPath -Recursive -Confirm:$false
     Write-Host "OU found "
     Write-Host "OU removed"
