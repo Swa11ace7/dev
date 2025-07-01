@@ -74,7 +74,7 @@ Try
 
     # Insert Data into SQL
     Write-Host -ForegroundColor Cyan "[SQL]: Inserting Data"
-    $insert = "INSERT INTO [$($schema)].[$($tableName)] (first_name, last_name, city, county, zip_code, office_phone, mobile_phone)"
+    $insert = "INSERT INTO [$($tableName)] (first_name, last_name, city, county, zip_code, office_phone, mobile_phone)"
 
     foreach($NewClient in $NewClients)
     {
@@ -85,7 +85,7 @@ Try
                             '$($NewClient.zip_code)', 
                             '$($NewClient.office_phone)', 
                             '$($NewClient.mobile_phone)')"
-        $qsqlCommand.CommandText = $insert + $values
+        $sqlCommand.CommandText = $insert + $values
         $sqlCommand.ExecuteNonQuery() | Out-Null
     }
 
