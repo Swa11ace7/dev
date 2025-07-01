@@ -2,117 +2,82 @@
 # Student Id: 010895068
 #>
 
-Try
-{
-    <# Create Database #>
-    Write-Host -ForegroundColor Cyan "[SQL]: Staring SQL Tasks"
-    
-    #Import the SqlServer module
-    if (Get-Module -Name sqlps) { Remove-Module sqlps }
-    Import-Module -Name SqlServer
-
-    # Set a string variable equal to the name SQL instance
-    $sqlServerInstanceName = "SRV19-PRIMARY\SQLEXPRESS"
-
-    # Sets the database name with this variable
-    $databaseName = "ClientDB"
-
-    # Create Connection to the SQL Server
-    $connectionString = "Data Source=$($sqlServerInstanceName);Initial Catalog=master;Integrated Security=True;"
-    $sqlConnection = New-Object System.Data.SqlClient.SqlConnection
-    $sqlConnection.ConnectionString = $connectionString
-    $sqlConnection.Open()
-
-    # Create Query to check if the database already exists
-    $detectQuery = "SELECT database_id FROM sys.databases WHERE name = '$($databaseName)'"
-
-    #Create Command to execute the query
-    $sqlCommand = New-Object System.Data.SqlClient.SqlCommand $detectQuery, $sqlConnection
-    $sqlReader = $sqlCommand.ExecuteReader()
-
-    if($sqlReader.Read())
-    {
-        $sqlReader.Close()
-        Write-Host -ForegroundColor Cyan "[SQL]: $($databaseName) database has been found and removed"
-        # Create query command to drop the database
-        $dropQuery = "ALTER DATABASE [$($databaseName)] SET SINGLE_USER WITH ROLLBACK IMMEDIATE DROP DATABASE [$($databaseName)]"
-        $sqlCommand.CommandText = $dropQuery
-        $sqlCommand.ExecuteNonQuery() | Out-Null
-    }
-    $sqlReader.Close()
-    $sqlReader.Dispose()
-
-    # Create the database
-    $createQuery = "CREATE DATABASE [$($databaseName)]" 
-    $sqlCommand.CommandText = $createQuery
-    $sqlCommand.ExecuteNonQuery() | Out-Null
-    Write-Host -ForegroundColor Cyan "[SQL]: Database Created:[$($sqlServerInstanceName)].[$($databaseName)]"
-
-    # Create Table
-    $schema = "dbo"
-    $tableName = 'Client_A_Contacts'
-
-    $createTableQuery = "
-        Use [$($databaseName)]
-        CREATE TABLE Client_A_Contacts
-        (
-            first_name varchar(40),
-            last_name varchar(40),
-            city varchar(40),
-            county varchar(40),
-            zip_code varchar(40),
-            office_phone varchar(40),
-            mobile_phone varchar(40),
-        )"
-    
-    $sqlCommand.CommandText = $createTableQuery
-    $sqlCommand.ExecuteNonQuery() | Out-Null
-    Write-Host -ForegroundColor Cyan "[SQL]: Table Created:[$($sqlServerInstanceName)].[$($databaseName)].[$($schema)].[$($tableName)]"
-
-    # Get Data from CSV file
-    $NewClients = Import-Csv -Path "$PSScriptRoot\NewClientData.csv"
-
-    # Insert Data into SQL
-    Write-Host -ForegroundColor Cyan "[SQL]: Inserting Data"
-    $insert = "INSERT INTO [$($tableName)] (first_name, last_name, city, county, zip_code, office_phone, mobile_phone)"
-
-    foreach($NewClient in $NewClients)
-    {
-        $values = " VALUES ('$($NewClient.first_name)',
-                            '$($NewClient.last_name)', 
-                            '$($NewClient.city)', 
-                            '$($NewClient.county)', 
-                            '$($NewClient.zip_code)', 
-                            '$($NewClient.office_phone)', 
-                            '$($NewClient.mobile_phone)')"
-        $sqlCommand.CommandText = $insert + $values
-        $sqlCommand.ExecuteNonQuery() | Out-Null
-    }
-
-    # Read Data
-    Write-Host -ForegroundColor Cyan "[SQL]: Reading Data"
-    $dataTable = New-Object System.Data.DataTable
-    $sqldataAdapter = New-Object System.Data.SqlClient.SqlDataAdapter
-    $sqlCommand.CommandText = "SELECT * FROM $($tableName)"
-    $sqldataAdapter.SelectCommand = $sqlCommand
-    $sqldataAdapter.Fill($dataTable)
-    
-    foreach ($row in $dataTable.Rows)
-    {
-        Write-Host $row["first_name"]
-        Write-Host "Client Name: $($row["first_name"]), $($row["last_name"])"
-        Write-Host "Address: $($row["county"]) County, City of $($row["city"]), Zip - $($row["zip"])"
-        Write-Host "Phone: Office $($row["office_phone"]), Mobile $($row["mobile_phone"])"
-        Write-Host "-----------"
-    }
-    Write-Host -ForegroundColor Cyan "[SQL]: SQL Tasks Complete"
-
+$domain = Get-ADDomain
+# Creating a New User Account
+$newUser = @{
+    SamAccountName = "mcribb"
+    Name = "Mark Cribb"
+    GivenName = "Mark"
+    Surname = "Cribb"
+    DisplayName = "Mark Cribb"
+    UserPrincipalName = "mrcibb@consultingfirm.com"
+    Path = $domain.UserContainer
+    AccountPassword = (ConvertTo-SecureString "P@ssword12345!" -AsPlainText -Force)
+    Enabled = $true
 }
-# Catch any Errors
-Catch{
-    Write-Host -ForegroundColor Red "An EXCEPTION occurred: $($_.Exception.Message)"
-    Write-Host -ForegroundColor Red "Stack Trace: $($_.Exception.StackTrace)"
+New-ADUser @newUser
+
+# Resetting a User Password
+$user = "mcribb"
+$newPassword = (ConvertTo-SecureString "N3WP@ssword12345!" -AsPlainText -Force)
+Set-ADAccountPassword -Identity $user -NewPassword $newPassword -Reset
+
+# Unlocking a User Account
+Unlock-ADAccount -Identity $user
+
+# Adding a User Account
+$group = "CN=FinanceGroup, $($domain.DistinguishedName)"
+Add-ADGroupMember -Identity $group -Members $user
+
+# Checks for the existence of the OU named "Finance" and removes it if found
+$AdRoot = $domain.DistinguishedName
+$DnsRoot = $domain.DnsRoot
+$OUCanonicalName = "Finance"
+$OUDisplayName = "Finance"
+$AdPath = "OU=$($OUCanonicalName),$($AdRoot)"
+
+try {
+    $OU =  Get-ADOrganizationalUnit -Identity $AdPath
+    Write-Host "OU not found"
 }
-Finally{
-    $sqlConnection.Close()  
+catch {
+    $OU = $null
 }
+
+If ($OU) {
+    Set-ADOrganizationUnit -Identity $AdPath -ProtectedFromAccidentalDeletion:$false
+    Remove-ADOrganizationalUnit -Identity $AdPath -Recursive -Confirm:$false
+    Write-Host "OU found "
+    Write-Host "OU removed"
+}
+
+New-ADOrganizationalUnit -Path $AdRoot -Name $OUCanonicalName -DisplayName $OUDisplayName 
+
+# Searching for Inactive User Accounts
+$dataFilter = (Get-Date).AddDays(-90)
+$inactiveUsers = Get-ADUser -Filter {LastLogonDate -lt $dataFilter} -Properties LastLogonDate
+
+$inactiveUsers | Select-Object Name, LastLogonDate
+
+
+# Import the CSV file into the OU
+$NewADUsers = Import-Csv $PSScriptRoot\financePersonnel.csv
+
+
+ForEach ($ADUser in $NewADUsers) {
+    $Attributes = @{
+        GivenName           = $($ADUser.First_Name)
+        Surname             = $($ADUser.Last_Name)
+        Name                = "$($ADUser.First_Name) $($ADUser.Last_Name)"
+        DisplayName         = "$($ADUser.First_Name) $($ADUser.Last_Name)"
+        SamAccountName      = $($ADUser.samAccountName)
+        UserPrincipalName   = "$($ADUser.samAccountName)@$($DnsRoot)"
+        PostalCode          = $($ADUser.PostalCode)
+        OfficePhone         = $($ADUser.OfficePhone)
+        MobilePhone         = $($ADUser.MobilePhone)
+        Path                = $AdPath
+    }
+    New-ADUser @Attributes
+}
+# Used to create a ADResults file
+Get-ADUser -Filter * -SearchBase "ou=Finance,dc=consultingfirm,dc=com" -Properties DisplayName,PostalCode,OfficePhone,MobilePhone > .\AdResults.txt
