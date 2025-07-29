@@ -58,7 +58,7 @@ Try{
                 $outputFiles =  "$PSScriptRoot\DailyLogs.txt" 
 
                 # Timepstamp for the log file
-                "TIMESTAMP: "+(Get-Date) | Out-File $outputFile -Append
+                "TIMESTAMP: "+(Get-Date) | Out-File $outputFiles -Append
 
                 # Writes the log file names to the output file
                 Get-ChildItem -Path "$PSScriptRoot" -Filter "*.log" | Out-file $outputFiles -Append
@@ -69,7 +69,7 @@ Try{
                 $outputFiles =  "$PSScriptRoot\AlphabeticalLogs.txt" 
 
                 # Timepstamp for the log file
-                "TIMESTAMP: "+(Get-Date) | Out-File $outputFile" -Append
+                "TIMESTAMP: "+(Get-Date) | Out-File $outputFiles -Append
 
                 # Writes the log file names to the output file in alphabetical order
                 Get-ChildItem -Path "$PSScriptRoot" -Filter "*.log" | Sort-Object Name | Out-file $outputFiles -Append
@@ -77,13 +77,14 @@ Try{
             3
             {
                 # Writes the CPU and Memory usage to the output file
-                Get-Process | Select-Object Name, CPU, WS | Out-Host
+                Get-Counter -Counter '\Processor(_Total)\% Processor Time'| Out-Host
+                Get-Counter -Counter '\Memory\% Committed Bytes In Use'| Out-Host
             }
             4
             {
 
                 # Writes the running processes to the output file
-                Get-Process | Out-Host | Select-Object Name, Id, CPU 
+                Get-Process  | Select-Object Name, Id, CPU | Out-GridView 
             }
             5
             {
