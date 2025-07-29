@@ -66,10 +66,7 @@ Try{
             2
             {
                 # Variable to hold the log file names
-                $outputFiles =  "$PSScriptRoot\AlphabeticalLogs.txt" 
-
-                # Timepstamp for the log file
-                "TIMESTAMP: "+(Get-Date) | Out-File $outputFiles -Append
+                $outputFiles =  "$PSScriptRoot\C916contents.txt" 
 
                 # Writes the log file names to the output file in alphabetical order
                 Get-ChildItem -Path "$PSScriptRoot" -Filter "*.log" | Sort-Object Name | Out-file $outputFiles -Append
