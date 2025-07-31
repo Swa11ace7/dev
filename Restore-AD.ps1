@@ -61,7 +61,7 @@ $inactiveUsers | Select-Object Name, LastLogonDate
 
 
 # Import the CSV file into the OU
-$NewADUsers = Import-Csv $PSScriptRoot\financePersonnel.csv
+$NewADUsers = Import-Csv "c:\Source\Requirements2\financePersonnel.csv"
 
 
 ForEach ($ADUser in $NewADUsers) {
