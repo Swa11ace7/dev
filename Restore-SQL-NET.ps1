@@ -116,3 +116,4 @@ Catch{
 Finally{
     $sqlConnection.Close()  
 }
+Invoke-Sqlcmd -Database ClientDB -ServerInstance .\SQLEXPRESS -Query 'SELECT * FROM dbo.Client_A_Contacts' > .\SqlResults.txt
