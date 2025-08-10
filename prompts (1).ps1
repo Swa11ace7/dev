@@ -81,7 +81,7 @@ Try{
             {
 
                 # Writes the running processes to the output file
-                Get-Process  | Select-Object Name, Id, CPU | Out-GridView 
+                Get-Process | Sort-Object -Property VM | Select-Object -Property Id, ProcessName, @{Name="VM (MB)";Expression={[math]::round($_.VM / 1MB, 2)}} | Out-GridView
             }
             5
             {
@@ -110,3 +110,4 @@ finally
 {
   
 }
+
